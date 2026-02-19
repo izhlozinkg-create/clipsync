@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ClipSync">
+<title>ClipSync</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Unbounded:wght@300;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0a0a0f; --surface:#12121a; --border:#1e1e2e;
+    --accent:#7c6af7; --accent2:#f7c96a; --text:#e8e8f0; --muted:#5a5a7a;
+    --win:#4fc3f7; --mac:#a8d8a8; --ipad:#f7a8d8; --danger:#f77a7a;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'JetBrains Mono',monospace;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;}
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:linear-gradient(rgba(124,106,247,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(124,106,247,0.04) 1px,transparent 1px);
+    background-size:40px 40px;}
+  .container{position:relative;z-index:1;max-width:680px;width:100%;margin:0 auto;padding:24px 20px;flex:1;display:flex;flex-direction:column;gap:18px;}
+  header{display:flex;align-items:center;justify-content:space-between;padding-bottom:16px;border-bottom:1px solid var(--border);}
+  .logo{font-family:'Unbounded',sans-serif;font-size:14px;font-weight:700;letter-spacing:.05em;color:var(--accent);}
+  .logo span{color:var(--accent2);}
+  .device-badge{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);background:var(--surface);border:1px solid var(--border);padding:6px 12px;border-radius:20px;}
+  .device-dot{width:7px;height:7px;border-radius:50%;animation:pulse 2s ease infinite;}
+  .device-dot.windows{background:var(--win);box-shadow:0 0 8px var(--win);}
+  .device-dot.mac{background:var(--mac);box-shadow:0 0 8px var(--mac);}
+  .device-dot.ipad{background:var(--ipad);box-shadow:0 0 8px var(--ipad);}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+  .cloud-status{display:flex;align-items:center;gap:8px;font-size:11px;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);}
+  .cloud-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);}
+  .cloud-dot.ok{background:var(--mac);box-shadow:0 0 6px var(--mac);}
+  .cloud-dot.err{background:var(--danger);}
+  .cloud-dot.loading{background:var(--accent2);animation:pulse 1s ease infinite;}
+
+  .input-section{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;transition:border-color .2s;}
+  .input-section:focus-within{border-color:var(--accent);box-shadow:0 0 0 1px rgba(124,106,247,.3);}
+  textarea{width:100%;background:transparent;border:none;outline:none;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.7;padding:16px;resize:none;min-height:100px;caret-color:var(--accent);}
+  textarea::placeholder{color:var(--muted);}
+  .input-footer{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-top:1px solid var(--border);gap:10px;}
+  .char-count{font-size:11px;color:var(--muted);}
+  .btn-send{display:flex;align-items:center;gap:8px;background:var(--accent);color:white;border:none;padding:8px 18px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;}
+  .btn-send:hover{background:#9580ff;transform:translateY(-1px);}
+  .btn-send:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+
+  .status-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .status-msg{font-size:11px;color:var(--muted);}
+  .status-msg.success{color:var(--mac);}
+  .status-msg.error{color:var(--danger);}
+  .btn-refresh{display:flex;align-items:center;gap:6px;background:transparent;color:var(--muted);border:1px solid var(--border);padding:6px 12px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;transition:all .2s;}
+  .btn-refresh:hover{color:var(--text);border-color:var(--accent);}
+
+  .section-title{font-family:'Unbounded',sans-serif;font-size:10px;font-weight:300;letter-spacing:.15em;color:var(--muted);text-transform:uppercase;display:flex;align-items:center;justify-content:space-between;}
+  .btn-clear-all{background:transparent;border:none;color:var(--danger);font-family:'JetBrains Mono',monospace;font-size:10px;cursor:pointer;opacity:.6;transition:opacity .2s;}
+  .btn-clear-all:hover{opacity:1;}
+
+  .items-list{display:flex;flex-direction:column;gap:10px;}
+  .empty-state{text-align:center;padding:50px 20px;color:var(--muted);font-size:12px;line-height:2;}
+  .empty-icon{font-size:28px;margin-bottom:10px;opacity:.4;}
+
+  .item-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;animation:slideIn .25s ease;transition:border-color .2s;}
+  .item-card:hover{border-color:rgba(124,106,247,.4);}
+  @keyframes slideIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+  .item-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--border);gap:8px;}
+  .device-tag{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;}
+  .device-tag.windows{background:rgba(79,195,247,.15);color:var(--win);}
+  .device-tag.mac{background:rgba(168,216,168,.15);color:var(--mac);}
+  .device-tag.ipad{background:rgba(247,168,216,.15);color:var(--ipad);}
+  .item-time{font-size:10px;color:var(--muted);}
+  .item-body{padding:12px;font-size:13px;line-height:1.6;color:var(--text);word-break:break-word;white-space:pre-wrap;max-height:200px;overflow-y:auto;}
+  .item-body a{color:var(--accent);text-decoration:none;}
+  .item-footer{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:8px 12px;border-top:1px solid var(--border);}
+  .btn-copy{display:flex;align-items:center;gap:6px;background:transparent;color:var(--accent);border:1px solid rgba(124,106,247,.4);padding:5px 12px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;transition:all .2s;}
+  .btn-copy:hover{background:rgba(124,106,247,.15);}
+  .btn-copy.copied{color:var(--mac);border-color:rgba(168,216,168,.4);background:rgba(168,216,168,.1);}
+  .btn-delete{background:transparent;color:var(--muted);border:1px solid var(--border);padding:5px 10px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;transition:all .2s;}
+  .btn-delete:hover{color:var(--danger);border-color:rgba(247,122,122,.4);}
+
+  .spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .6s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  ::-webkit-scrollbar{width:4px;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+  @media(max-width:480px){.container{padding:16px;gap:14px;}textarea{font-size:14px;}}
+  @supports(padding:max(0px)){.container{padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right));padding-bottom:max(24px,env(safe-area-inset-bottom));}}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo">CLIP<span>SYNC</span></div>
+    <div class="device-badge">
+      <div class="device-dot" id="deviceDot"></div>
+      <span id="deviceName">...</span>
+    </div>
+  </header>
+
+  <div class="cloud-status">
+    <div class="cloud-dot loading" id="cloudDot"></div>
+    <span id="cloudMsg">подключение к облаку...</span>
+  </div>
+
+  <div class="input-section">
+    <textarea id="inputText" placeholder="Вставь текст или ссылку...&#10;Cmd+Enter / Ctrl+Enter — быстрая отправка" maxlength="10000"></textarea>
+    <div class="input-footer">
+      <span class="char-count" id="charCount">0 / 10000</span>
+      <button class="btn-send" id="btnSend" onclick="sendItem()">→ отправить</button>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <div class="status-msg" id="statusMsg">● инициализация...</div>
+    <button class="btn-refresh" onclick="loadItems()">↻ обновить</button>
+  </div>
+
+  <div class="section-title">
+    <span>история</span>
+    <button class="btn-clear-all" onclick="clearAll()">✕ очистить всё</button>
+  </div>
+
+  <div class="items-list" id="itemsList">
+    <div class="empty-state"><div class="empty-icon">☁️</div>подключение...<br><span style="opacity:.5">загружаем данные из облака</span></div>
+  </div>
+</div>
+
+<script>
+const API_KEY = '$2a$10$Rr683/AamCz9vCfQ4jtOquiCGNnmihWVhpu//C9ZL7ev3CJUSSRla';
+const BASE = 'https://api.jsonbin.io/v3';
+const BIN_STORAGE_KEY = 'clipsync_bin_id';
+
+// ── Device ────────────────────────────────────────────────────
+function detectDevice() {
+  const ua = navigator.userAgent;
+  if (/iPad/.test(ua)||(navigator.maxTouchPoints>1&&/Macintosh/.test(ua))) return {name:'iPad',cls:'ipad',emoji:'📱'};
+  if (/Macintosh|Mac OS X/.test(ua)&&!/iPhone|iPad/.test(ua)) return {name:'MacBook',cls:'mac',emoji:'💻'};
+  if (/Windows/.test(ua)) return {name:'Windows',cls:'windows',emoji:'🖥️'};
+  return {name:'Устройство',cls:'mac',emoji:'💻'};
+}
+const device = detectDevice();
+document.getElementById('deviceDot').classList.add(device.cls);
+document.getElementById('deviceName').textContent = device.emoji + ' ' + device.name;
+
+// ── Cloud status ───────────────────────────────────────────────
+function setCloud(state, msg) {
+  const dot = document.getElementById('cloudDot');
+  dot.className = 'cloud-dot ' + state;
+  document.getElementById('cloudMsg').textContent = msg;
+}
+
+// ── JSONBin API ───────────────────────────────────────────────
+async function getBinId() {
+  let binId = localStorage.getItem(BIN_STORAGE_KEY);
+  if (binId) return binId;
+  // Create new bin
+  const res = await fetch(BASE + '/b', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','X-Master-Key':API_KEY,'X-Bin-Name':'clipsync','X-Bin-Private':'false'},
+    body: JSON.stringify({items:[]})
+  });
+  const data = await res.json();
+  binId = data.metadata.id;
+  localStorage.setItem(BIN_STORAGE_KEY, binId);
+  return binId;
+}
+
+async function readBin() {
+  const binId = await getBinId();
+  const res = await fetch(BASE + '/b/' + binId + '/latest', {
+    headers: {'X-Master-Key': API_KEY}
+  });
+  const data = await res.json();
+  return data.record.items || [];
+}
+
+async function writeBin(items) {
+  const binId = await getBinId();
+  await fetch(BASE + '/b/' + binId, {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json','X-Master-Key':API_KEY},
+    body: JSON.stringify({items})
+  });
+}
+
+// ── UI helpers ────────────────────────────────────────────────
+const inputText = document.getElementById('inputText');
+inputText.addEventListener('input', function() {
+  document.getElementById('charCount').textContent = this.value.length + ' / 10000';
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 300) + 'px';
+});
+
+function setStatus(msg, type) {
+  const el = document.getElementById('statusMsg');
+  el.className = 'status-msg' + (type ? ' '+type : '');
+  el.textContent = msg;
+}
+
+function formatTime(ts) {
+  const diff = Date.now() - ts;
+  if (diff < 60000) return 'только что';
+  if (diff < 3600000) return Math.floor(diff/60000) + ' мин назад';
+  if (diff < 86400000) return Math.floor(diff/3600000) + ' ч назад';
+  return new Date(ts).toLocaleDateString('ru',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+}
+
+function linkify(text) {
+  return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+             .replace(/(https?:\/\/[^\s]+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>');
+}
+
+// ── Load & render ─────────────────────────────────────────────
+async function loadItems() {
+  setCloud('loading', 'синхронизация...');
+  try {
+    const items = await readBin();
+    renderItems(items.sort((a,b) => b.ts - a.ts));
+    setCloud('ok', 'облако подключено ✓');
+    setStatus('● обновлено · ' + formatTime(Date.now()), 'success');
+  } catch(e) {
+    setCloud('err', 'ошибка соединения');
+    setStatus('● ошибка: ' + e.message, 'error');
+  }
+}
+
+function renderItems(items) {
+  const list = document.getElementById('itemsList');
+  if (!items.length) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div>пока ничего нет<br><span style="opacity:.5">отправь первую запись выше</span></div>';
+    return;
+  }
+  list.innerHTML = items.map(it => `
+    <div class="item-card" id="card-${it.id}">
+      <div class="item-header">
+        <span class="device-tag ${it.deviceCls}">${it.deviceEmoji} ${it.deviceName}</span>
+        <span class="item-time">${formatTime(it.ts)}</span>
+      </div>
+      <div class="item-body">${linkify(it.text)}</div>
+      <div class="item-footer">
+        <button class="btn-copy" onclick="copyItem('${it.id}',this)">⎘ копировать</button>
+        <button class="btn-delete" onclick="deleteItem('${it.id}')">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+// ── Send ──────────────────────────────────────────────────────
+async function sendItem() {
+  const text = inputText.value.trim();
+  if (!text) return;
+  const btn = document.getElementById('btnSend');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+  try {
+    const items = await readBin();
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+    items.unshift({id, text, deviceName:device.name, deviceCls:device.cls, deviceEmoji:device.emoji, ts:Date.now()});
+    if (items.length > 50) items.length = 50;
+    await writeBin(items);
+    inputText.value = ''; inputText.style.height = 'auto';
+    document.getElementById('charCount').textContent = '0 / 10000';
+    setStatus('✓ отправлено!', 'success');
+    renderItems(items);
+    setCloud('ok', 'облако подключено ✓');
+  } catch(e) {
+    setStatus('● ошибка: ' + e.message, 'error');
+    setCloud('err', 'ошибка соединения');
+  }
+  btn.disabled = false; btn.innerHTML = '→ отправить';
+}
+
+// ── Copy ──────────────────────────────────────────────────────
+async function copyItem(id, btn) {
+  try {
+    const items = await readBin();
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+    await navigator.clipboard.writeText(item.text).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = item.text; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+    });
+    btn.className = 'btn-copy copied'; btn.textContent = '✓ скопировано';
+    setTimeout(() => { btn.className = 'btn-copy'; btn.textContent = '⎘ копировать'; }, 2000);
+  } catch(e) {}
+}
+
+// ── Delete ────────────────────────────────────────────────────
+async function deleteItem(id) {
+  try {
+    const items = await readBin();
+    await writeBin(items.filter(i => i.id !== id));
+    loadItems();
+  } catch(e) {}
+}
+
+async function clearAll() {
+  if (!confirm('Удалить всю историю на всех устройствах?')) return;
+  try { await writeBin([]); loadItems(); } catch(e) {}
+}
+
+// Shortcuts
+inputText.addEventListener('keydown', e => {
+  if ((e.ctrlKey||e.metaKey) && e.key === 'Enter') sendItem();
+});
+
+// Auto-refresh every 15 sec
+setInterval(loadItems, 15000);
+
+// Init
+loadItems();
+</script>
+</body>
+</html>
